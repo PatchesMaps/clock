@@ -3,29 +3,18 @@ import Worker from "worker-loader!./worker.js" // eslint-disable-line
 class Clock extends HTMLCanvasElement {
   constructor (props) {
     super()
-    //implementation
-    window.clock = this
     const width = window.innerWidth
     const height = window.innerHeight
 
-    this.style.position = 'absolute'
-    this.style.width = `${width}px`
-    this.style.height = `${height}px`
     this.width = width * 2
     this.height = height * 2
-    this.props = props
 
     const offscreen = this.transferControlToOffscreen()
 
-    this.worker = new Worker('/worker.js', { type: 'module', name: 'timekeeper', credentials: 'same-origin' })
-    this.worker.postMessage({ canvas: offscreen, width: this.width, height: this.height, action: 'init' }, [offscreen])
-  }
+    this.worker = new Worker('/worker.js', { type: 'module', name: 'timekeeper', credentials: 'same-origin' }) // create a worker to handle clock animations without interupting the main thread
+    this.worker.postMessage({ canvas: offscreen, width: this.width, height: this.height, action: 'init' }, [offscreen]) // initialize the worker and pass the OffscreenCanvas element to it
 
-  connectedCallback () {
-    //implementation
-    console.log('connected')
-
-    this.worker.postMessage({ action: 'start:clock' })
+    // Add event listeners to the timer buttons
     document.getElementById('startButton').addEventListener('click', () => {
       this.worker.postMessage({ action: 'start:timer' })
     })
@@ -37,19 +26,8 @@ class Clock extends HTMLCanvasElement {
     })
   }
 
-  disconnectedCallback () {
-    //implementation
-    console.log('disconnected:')
-  }
-
-  attributeChangedCallback (name, oldVal, newVal) {
-    //implementation
-    console.log('attribute')
-  }
-
-  adoptedCallback () {
-    //implementation
-    console.log('adopted')
+  connectedCallback () {
+    this.worker.postMessage({ action: 'start:clock' }) // tell the worker to start animating the clock when the custom element is added to the page
   }
 }
 
