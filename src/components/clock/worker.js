@@ -6,14 +6,14 @@ class WorkerClock {
     this.width = width
     this.height = height
     this.ctx = ctx
+    this.timer = {
+      active: false,
+      start: null
+    }
   }
 
   getContext () {
     return this.ctx
-  }
-
-  degToRad (degrees) {
-    return degrees * (Math.PI / 180);
   }
 
   getClockRadius() {
@@ -37,51 +37,58 @@ class WorkerClock {
     ctx.arc(0, 0, radius, 0, Math.PI * 2, true) // Outer circle
     ctx.moveTo(110, 75)
     ctx.stroke()
-    // ctx.beginPath()
-    // ctx.arc(0, 0, radius * 0.025, 0, Math.PI * 2)
-    // ctx.fillStyle = '#333'
-    // ctx.fill()
+    ctx.beginPath()
+    ctx.arc(0, 0, radius * 0.015, 0, Math.PI * 2)
+    ctx.fillStyle = '#333'
+    ctx.fill()
     ctx.restore()
   }
 
-  drawTicks() {
-    const [x, y] = this.getClockCenter()
+  drawTicks(opts) {
+    const {
+      x,
+      y,
+      radius,
+      ticks,
+      labelInterval = 5,
+      labelDivisor = 1,
+      tick = { width: 1, length: 100 },
+      labelTick = { width: 5, length: 150 }
+    } = opts
     const ctx = this.getContext('2d')
-    const radius = this.getClockRadius()
 
     ctx.save()
     ctx.translate(x, y)
-    ctx.font = radius * 0.15 + "px arial";
+    ctx.font = radius * 0.15 + "px arial"
     ctx.lineWidth = 1
-    ctx.textBaseline = "middle";
-    ctx.textAlign = "center";
+    ctx.textBaseline = "middle"
+    ctx.textAlign = "center"
 
-    for (let num = 0; num < 60;) {
+    for (let num = 0; num < ticks;) {
       num++
-      const ang = num * Math.PI / 30;
+      const ang = num * Math.PI / (ticks / 2);
       ctx.rotate(ang);
-      ctx.translate(0, -radius * 0.85);
-      if (!(num % 5)) {
-        ctx.lineWidth = 5
-        ctx.beginPath();
-        ctx.moveTo(0, -100)
-        ctx.lineTo(0, -radius * 0.15);
+      ctx.translate(0, -radius * 0.85)
+      if (!(num % labelInterval)) {
+        ctx.lineWidth = labelTick.width
+        ctx.beginPath()
+        ctx.moveTo(0, labelTick.length * -1)
+        ctx.lineTo(0, -radius * 0.15)
         ctx.stroke()
         ctx.rotate(-ang);
-        ctx.fillText((num / 5).toString(), 0, 0);
+        ctx.fillText((num / labelDivisor).toString(), 0, 0)
         ctx.fill();
         ctx.rotate(ang);
       }
       else {
-        ctx.lineWidth = 1
+        ctx.lineWidth = tick.width
         ctx.beginPath();
-        ctx.moveTo(0, -150)
-        ctx.lineTo(0, -radius * 0.15);
+        ctx.moveTo(0, tick.length * -1)
+        ctx.lineTo(0, -radius * 0.15)
         ctx.stroke()
       }
-      // ctx.rotate(ang);
-      ctx.translate(0, radius * 0.85);
-      ctx.rotate(-ang);
+      ctx.translate(0, radius * 0.85)
+      ctx.rotate(-ang)
     }
 
     ctx.restore()
@@ -92,10 +99,158 @@ class WorkerClock {
     const radius = this.getClockRadius()
 
     this.drawClock(x, y, radius)
-    this.drawTicks()
+    this.drawTicks({ x, y, radius, ticks: 60, labelDivisor: 5 })
   }
 
-  drawHourHand() {
+  drawHoursTimer (date) {
+    const [x, y] = this.getClockCenter()
+    const radius = this.getClockRadius()
+    const offset = radius / 3
+    const r = radius / 8
+
+    this.drawClock(x - offset, y, r)
+    this.drawTicks({
+      x: x - offset,
+      y,
+      radius: r,
+      ticks: 12,
+      labelInterval: 1
+    })
+    const hoursDelta = (date / 3600000) - (this.startTime / 3600000)
+    let accumulatedHours = hoursDelta % 12
+    const ctx = this.getContext('2d')
+
+    if (!this.timer.active) accumulatedHours = 0
+
+    ctx.save()
+    ctx.translate(x - offset, y)
+    ctx.lineWidth = 2
+    ctx.rotate(accumulatedHours * ((Math.PI * 2) / 12))
+    ctx.beginPath();
+    ctx.moveTo(0, 0)
+    ctx.lineTo(0, r * -1);
+    ctx.stroke()
+    ctx.restore()
+  }
+
+  drawMinutesTimer (date) {
+    const [x, y] = this.getClockCenter()
+    const radius = this.getClockRadius()
+    const offset = radius / 3
+    const r = radius / 8
+
+    this.drawClock(x, y - offset, r)
+    this.drawTicks({
+      x,
+      y: y - offset,
+      radius: r,
+      ticks: 60,
+      labelInterval: 5
+    })
+    const minutesDelta = (date / 60000) - (this.timer.start / 60000)
+    let accumulatedMinutes = minutesDelta % 60
+    const ctx = this.getContext('2d')
+
+    if (!this.timer.active) accumulatedMinutes = 0
+
+    ctx.save()
+    ctx.translate(x, y - offset)
+    ctx.lineWidth = 2
+    ctx.rotate(accumulatedMinutes * ((Math.PI * 2) / 60))
+    ctx.beginPath();
+    ctx.moveTo(0, 0)
+    ctx.lineTo(0, r * -1);
+    ctx.stroke()
+    ctx.restore()
+  }
+
+  drawSecondsTimer (date) {
+    const [x, y] = this.getClockCenter()
+    const radius = this.getClockRadius()
+    const offset = radius / 3
+    const r = radius / 8
+
+    this.drawClock(x + offset, y, r)
+    this.drawTicks({
+      x: x + offset,
+      y,
+      radius: r,
+      ticks: 60,
+      labelInterval: 5
+    })
+    const secondsDelta = (date / 1000) - (this.timer.start / 1000)
+    let accumulatedSeconds = secondsDelta % 60
+    const ctx = this.getContext('2d')
+
+    if (!this.timer.active) accumulatedSeconds = 0
+
+    ctx.save()
+    ctx.translate(x + offset, y)
+    ctx.lineWidth = 2
+    ctx.rotate(accumulatedSeconds * ((Math.PI * 2) / 60))
+    ctx.beginPath();
+    ctx.moveTo(0, 0)
+    ctx.lineTo(0, r * -1);
+    ctx.stroke()
+    ctx.restore()
+  }
+
+  drawMilliSecondsTimer (date) {
+    const [x, y] = this.getClockCenter()
+    const radius = this.getClockRadius()
+    const offset = radius / 3
+    const r = radius / 8
+
+    this.drawClock(x, y + offset, r)
+    this.drawTicks({
+      x,
+      y: y + offset,
+      radius: r,
+      ticks: 100,
+      labelInterval: 5,
+      labelDivisor: 0.1
+    })
+    const millisecondsDelta = date - this.timer.start
+    let accumulatedMilliseconds = millisecondsDelta % 1000
+    const ctx = this.getContext('2d')
+
+    if (!this.timer.active) accumulatedMilliseconds = 0
+
+    ctx.save()
+    ctx.translate(x, y + offset)
+    ctx.strokeStyle = 'red';
+    ctx.lineWidth = 2
+    ctx.rotate(accumulatedMilliseconds * ((Math.PI * 2) / 1000))
+    ctx.beginPath();
+    ctx.moveTo(0, 0)
+    ctx.lineTo(0, r * -1);
+    ctx.stroke()
+    ctx.restore()
+  }
+
+  drawTimerFaces (date) {
+    this.drawHoursTimer(date)
+    this.drawMinutesTimer(date)
+    this.drawSecondsTimer(date)
+    this.drawMilliSecondsTimer(date)
+  }
+
+  startTimer () {
+    console.log('start:')
+    this.timer.start = Date.now()
+    this.timer.active = true
+  }
+
+  stopTimer () {
+    this.timer.active = false
+  }
+
+  resetTimer () {
+    this.timer.start = null
+    this.timer.active = false
+  }
+
+  drawHourHand () {
     const date = new Date()
     const radius = this.getClockRadius()
     const ctx = this.getContext('2d')
@@ -106,7 +261,7 @@ class WorkerClock {
     ctx.translate(x, y)
     ctx.lineWidth = 30
     ctx.rotate(hours * ((Math.PI * 2) / 12))
-    ctx.beginPath();
+    ctx.beginPath()
     ctx.moveTo(0, (radius - radius * 0.10) * -1)
     ctx.lineTo(0, radius * -1);
     ctx.stroke()
@@ -157,6 +312,7 @@ class WorkerClock {
     ctx.clearRect(0, 0, this.width, this.height)
 
     this.drawClockFace()
+    this.drawTimerFaces(Date.now())
     this.drawHourHand()
     this.drawMinuteHand()
     this.drawSecondHand()
@@ -174,5 +330,17 @@ worker.addEventListener('message', event => {
       break;
     case 'start:clock':
       requestAnimationFrame(this.clock.draw)
+      break;
+    case 'start:timer':
+      this.clock.startTimer?.()
+      break;
+    case 'stop:timer':
+      this.clock.stopTimer?.()
+      break;
+    case 'reset:timer':
+      this.clock.resetTimer?.()
+      break;
+    default:
+      console.warn(`Unknown message action: ${event.data.action}`)
   }
 })
