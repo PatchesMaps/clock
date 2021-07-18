@@ -120,7 +120,7 @@ class WorkerClock {
     let accumulatedHours = hoursDelta % 12
     const ctx = this.getContext('2d')
 
-    if (!this.timer.active) accumulatedHours = 0
+    if (!this.timer.start) accumulatedHours = 0
 
     ctx.save()
     ctx.translate(x - offset, y)
@@ -151,7 +151,7 @@ class WorkerClock {
     let accumulatedMinutes = minutesDelta % 60
     const ctx = this.getContext('2d')
 
-    if (!this.timer.active) accumulatedMinutes = 0
+    if (!this.timer.start) accumulatedMinutes = 0
 
     ctx.save()
     ctx.translate(x, y - offset)
@@ -182,7 +182,7 @@ class WorkerClock {
     let accumulatedSeconds = secondsDelta % 60
     const ctx = this.getContext('2d')
 
-    if (!this.timer.active) accumulatedSeconds = 0
+    if (!this.timer.start) accumulatedSeconds = 0
 
     ctx.save()
     ctx.translate(x + offset, y)
@@ -214,7 +214,7 @@ class WorkerClock {
     let accumulatedMilliseconds = millisecondsDelta % 1000
     const ctx = this.getContext('2d')
 
-    if (!this.timer.active) accumulatedMilliseconds = 0
+    if (!this.timer.start) accumulatedMilliseconds = 0
 
     ctx.save()
     ctx.translate(x, y + offset)
@@ -236,8 +236,7 @@ class WorkerClock {
   }
 
   startTimer () {
-    console.log('start:')
-    this.timer.start = Date.now()
+    if (!this.timer.start) this.timer.start = Date.now()
     this.timer.active = true
   }
 
@@ -306,17 +305,18 @@ class WorkerClock {
     ctx.restore()
   }
 
-  draw() {
+  draw(lastDate) {
     const ctx = this.getContext('2d')
+    let date = this.timer.active ? Date.now() : lastDate
 
     ctx.clearRect(0, 0, this.width, this.height)
 
     this.drawClockFace()
-    this.drawTimerFaces(Date.now())
+    this.drawTimerFaces(date)
     this.drawHourHand()
     this.drawMinuteHand()
     this.drawSecondHand()
-    requestAnimationFrame(this.draw)
+    requestAnimationFrame(() => this.draw(date))
   }
 }
 
@@ -329,15 +329,19 @@ worker.addEventListener('message', event => {
       this.clock = new WorkerClock(width, height, ctx)
       break;
     case 'start:clock':
+      console.log('event.data.action:', event.data.action)
       requestAnimationFrame(this.clock.draw)
       break;
     case 'start:timer':
+      console.log('event.data.action:', event.data.action)
       this.clock.startTimer?.()
       break;
     case 'stop:timer':
+      console.log('event.data.action:', event.data.action)
       this.clock.stopTimer?.()
       break;
     case 'reset:timer':
+      console.log('event.data.action:', event.data.action)
       this.clock.resetTimer?.()
       break;
     default:

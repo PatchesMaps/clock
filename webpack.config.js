@@ -32,7 +32,7 @@ module.exports = {
   ],
 
   devServer: {
-    port: 2020,
+    port: 2021,
     clientLogLevel: 'none',
     publicPath: path.resolve('/'),
     contentBase: path.resolve(__dirname, '../', 'build'),

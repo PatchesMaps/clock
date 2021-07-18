@@ -26,7 +26,15 @@ class Clock extends HTMLCanvasElement {
     console.log('connected')
 
     this.worker.postMessage({ action: 'start:clock' })
-    this.worker.postMessage({ action: 'start:timer' })
+    document.getElementById('startButton').addEventListener('click', () => {
+      this.worker.postMessage({ action: 'start:timer' })
+    })
+    document.getElementById('stopButton').addEventListener('click', () => {
+      this.worker.postMessage({ action: 'stop:timer' })
+    })
+    document.getElementById('resetButton').addEventListener('click', () => {
+      this.worker.postMessage({ action: 'reset:timer' })
+    })
   }
 
   disconnectedCallback () {
