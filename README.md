@@ -1,5 +1,5 @@
 # clock
-clock challenge
+Analog chronograph experimenting with web components, OffscreenCanvas, and workers.
 
 npm install
 
